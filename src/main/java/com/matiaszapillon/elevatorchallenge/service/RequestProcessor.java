@@ -1,13 +1,17 @@
 package com.matiaszapillon.elevatorchallenge.service;
 
+import com.matiaszapillon.elevatorchallenge.entity.Elevator;
 import com.matiaszapillon.elevatorchallenge.entity.FreightElevator;
 import com.matiaszapillon.elevatorchallenge.entity.PublicElevator;
 import com.matiaszapillon.elevatorchallenge.entity.Request;
 import com.matiaszapillon.elevatorchallenge.utils.Direction;
+import com.matiaszapillon.elevatorchallenge.utils.ElevatorType;
 import com.matiaszapillon.elevatorchallenge.utils.Location;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
+
+import java.util.Arrays;
 
 @Component
 public class RequestProcessor implements CommandLineRunner {
@@ -24,39 +28,45 @@ public class RequestProcessor implements CommandLineRunner {
     public void run(String... args) {
         initializeElevators();
         initializeRequests(args);
-        while (!publicElevator.getUpPriorityQueue().isEmpty() || !publicElevator.getDownPriorityQueue().isEmpty()) {
-            publicElevator.processRequests();
+        Thread publicElevatorThread = new Thread(() -> {
+            publicElevator.start();
+        });
+        Thread freightElevatorThread = new Thread(() -> {
+            freightElevator.start();
+        });
+        if(!publicElevator.getUpPriorityQueue().isEmpty() || !publicElevator.getDownPriorityQueue().isEmpty()) {
+            publicElevatorThread.start();
         }
-
-        System.out.println("Finished all requests.");
-        this.publicElevator.setOnGoingDirection(Direction.NONE);
-        this.freightElevator.setOnGoingDirection(Direction.NONE);
+        if(!freightElevator.getUpPriorityQueue().isEmpty() || !freightElevator.getDownPriorityQueue().isEmpty()) {
+            freightElevatorThread.start();
+        }
         //TODO Handle new requests to process again from keyboard or by endpoint.
     }
 
     /**
      * Request format: {"currentFloor;desiredFloor;Direction;Location;weight;keycode"}
      * only keycode might be null.
-     * @param args
+     * @param args requests to process
      */
     private void initializeRequests(String[] args) {
         for (String arg : args) {
             String[] request = arg.split(";");
-            int currentFloor = Integer.parseInt(request[0]);
-            int desiredFloor = Integer.parseInt(request[1]);
-            Direction direction = Direction.findByName(request[2]);
-            Location location = Location.findByName(request[3]);
-            Long weight = Long.valueOf(request[4]);
+            ElevatorType elevatorType = ElevatorType.findByName(request[0]);
+            int currentFloor = Integer.parseInt(request[1]);
+            int desiredFloor = Integer.parseInt(request[2]);
+            Direction direction = Direction.findByName(request[3]);
+            Location location = Location.findByName(request[4]);
+            Long weight = Long.valueOf(request[5]);
             String keycode = null;
-            if(request.length == 6) {
-                keycode = request[5];
+            if(request.length == 7) {
+                keycode = request[6];
             }
 
-            Request newRequestToProcess = new Request(currentFloor, desiredFloor, direction, location, weight, keycode);
-            if(Direction.UP.equals(direction)) {
+            Request newRequestToProcess = new Request(elevatorType, currentFloor, desiredFloor, direction, location, weight, keycode);
+            if(ElevatorType.PUBLIC.equals(elevatorType)) {
                 this.publicElevator.addRequest(newRequestToProcess);
             } else {
-                this.publicElevator.addRequest(newRequestToProcess);
+                this.freightElevator.addRequest(newRequestToProcess);
             }
         }
     }
@@ -72,5 +82,12 @@ public class RequestProcessor implements CommandLineRunner {
 
     public FreightElevator getFreightElevator() {
         return freightElevator;
+    }
+
+    public Boolean didElevatorFinishProcessing(Elevator elevator) {
+        return elevator.getUpPriorityQueue().isEmpty() &&
+                elevator.getDownPriorityQueue().isEmpty() &&
+                Direction.NONE.equals(elevator.getOnGoingDirection());
+
     }
 }
