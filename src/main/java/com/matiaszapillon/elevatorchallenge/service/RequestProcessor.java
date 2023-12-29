@@ -11,8 +11,6 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
-import java.util.Arrays;
-
 @Component
 public class RequestProcessor implements CommandLineRunner {
 
@@ -50,13 +48,14 @@ public class RequestProcessor implements CommandLineRunner {
      */
     private void initializeRequests(String[] args) {
         for (String arg : args) {
+            //TODO I don't like it. need to improve it.
             String[] request = arg.split(";");
             ElevatorType elevatorType = ElevatorType.findByName(request[0]);
             int currentFloor = Integer.parseInt(request[1]);
             int desiredFloor = Integer.parseInt(request[2]);
             Direction direction = Direction.findByName(request[3]);
             Location location = Location.findByName(request[4]);
-            Long weight = Long.valueOf(request[5]);
+            long weight = Long.valueOf(request[5]);
             String keycode = null;
             if(request.length == 7) {
                 keycode = request[6];
@@ -88,6 +87,5 @@ public class RequestProcessor implements CommandLineRunner {
         return elevator.getUpPriorityQueue().isEmpty() &&
                 elevator.getDownPriorityQueue().isEmpty() &&
                 Direction.NONE.equals(elevator.getOnGoingDirection());
-
     }
 }

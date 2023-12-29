@@ -28,9 +28,10 @@ class RequestProcessorTest {
     }
 
 
-    //Check movements order
+    //Check movement position
     @Test
     public void givenAllUpRequests_whenMovingElevator_thenShouldStopInHighestFloor() {
+        // Arrange
         String[] requests = new String[]{
                 "PUBLIC;0;5;UP;INSIDE;5;12345",
                 "PUBLIC;0;3;UP;INSIDE;3;12345",
@@ -38,17 +39,20 @@ class RequestProcessorTest {
                 "PUBLIC;3;4;UP;OUTSIDE;350;12345",
                 "PUBLIC;7;23;UP;OUTSIDE;270;12345",
         };
+        // Act
         requestProcessor.run(requests);
         PublicElevator publicElevator = requestProcessor.getPublicElevator();
         Awaitility.await()
                 .atMost(300, TimeUnit.SECONDS)
                 .until( () -> requestProcessor.didElevatorFinishProcessing(publicElevator));
 
+        // Asserts
         Assertions.assertEquals(47, requestProcessor.getPublicElevator().getCurrentFloor());
     }
 
     @Test
-    public void givenUpAndDownRequests_whenMovingElevator_thenShouldPrioritizeDirectionAndOrder() throws InterruptedException {
+    public void givenUpAndDownRequests_whenMovingElevator_thenShouldPrioritizeDirectionAndOrder() {
+        // Arrange
         String[] requests = new String[]{
                 "FREIGHT;0;50;UP;INSIDE;50",
                 "PUBLIC;0;5;UP;INSIDE;5;12345",
@@ -60,14 +64,19 @@ class RequestProcessorTest {
                 "FREIGHT;0;2;DOWN;INSIDE;200",
                 "FREIGHT;4;-1;DOWN;OUTSIDE;400",
         };
+
+        // Act
         requestProcessor.run(requests);
         PublicElevator publicElevator = requestProcessor.getPublicElevator();
         FreightElevator freightElevator = requestProcessor.getFreightElevator();
         Awaitility.await()
                 .atMost(300, TimeUnit.SECONDS)
-                .until( () ->requestProcessor.didElevatorFinishProcessing(publicElevator)
+                .until( () -> requestProcessor.didElevatorFinishProcessing(publicElevator)
                         && requestProcessor.didElevatorFinishProcessing(freightElevator));
 
+        // Asserts
+        Assertions.assertEquals(Direction.NONE, publicElevator.getOnGoingDirection());
+        Assertions.assertEquals(Direction.NONE, freightElevator.getOnGoingDirection());
         Assertions.assertEquals(5,requestProcessor.getPublicElevator().getCurrentFloor());
         Assertions.assertEquals(-1,requestProcessor.getFreightElevator().getCurrentFloor());
     }
@@ -84,7 +93,7 @@ class RequestProcessorTest {
                 () -> freightElevator.validateRequest(newIncomingRequest));
 
         // Assert
-        Assertions.assertEquals("Weight limit has been reached. Cannot move the elevator", exceededWeightLimitException.getMessage());
+        Assertions.assertEquals(ExceededWeightLimitException.WEIGHT_LIMIT_REACHED_MESSAGE, exceededWeightLimitException.getMessage());
     }
 
     //Check keycode validation
@@ -99,7 +108,7 @@ class RequestProcessorTest {
                 () -> publicElevator.validateRequest(newIncomingRequest));
 
         // Assert
-        Assertions.assertEquals("Not valid keycard introduced. Cannot process the request", incorrectKeyCodeException.getMessage());
+        Assertions.assertEquals(IncorrectKeyCodeException.INVALID_KEYCODE_MESSAGE, incorrectKeyCodeException.getMessage());
     }
 
     @Test

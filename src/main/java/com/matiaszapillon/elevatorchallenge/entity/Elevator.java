@@ -23,10 +23,7 @@ public abstract class Elevator {
     protected Elevator(Long weightLimit) {
         this.weightLimit = weightLimit;
         onGoingDirection = Direction.NONE;
-        //upPriorityQueue = new PriorityQueue<>((req1, req2) -> req1.desiredFloor() - req2.desiredFloor()); //Default, lowest floor first
-        //downPriorityQueue = new PriorityQueue<>((req1, req2) -> req2.desiredFloor() - req1.desiredFloor()); //Highest floor first
-        Comparator<Request> upRequestComparator = Comparator.comparingInt(Request::desiredFloor)
-                .thenComparing((req1, req2) -> {
+        Comparator<Request> locationComparator = (req1, req2) -> {
             if(req1.currentLocation().equals(req2.currentLocation())) {
                 return 0;
             }
@@ -35,21 +32,25 @@ public abstract class Elevator {
             } else {
                 return 1;
             }
-        });
+        };
+        Comparator<Request> upRequestComparator = Comparator.comparingInt(Request::desiredFloor)
+                .thenComparing(locationComparator);
 
         Comparator<Request> downRequestComparator = Comparator.comparingInt(Request::desiredFloor).reversed()
-                .thenComparing((req1, req2) -> {
-                    if(req1.currentLocation().equals(req2.currentLocation())) {
-                        return 0;
-                    }
-                    if(req1.currentLocation().equals(Location.INSIDE)) {
-                        return -1; //Inside has more priority than outside.
-                    } else {
-                        return 1;
-                    }
-                });
+                .thenComparing(locationComparator);
         upPriorityQueue = new PriorityQueue<>(upRequestComparator);
         downPriorityQueue = new PriorityQueue<>(downRequestComparator);
+    }
+
+    /**
+     * Main method to start processing and moving the elevator
+     */
+    public void start() {
+        while (!upPriorityQueue.isEmpty() || !downPriorityQueue.isEmpty()) {
+            processRequests();
+        }
+        System.out.println(this.getClass().getSimpleName() + " -- Finished all requests.");
+        onGoingDirection = Direction.NONE;
     }
 
     public void addRequest(Request request) {
@@ -60,18 +61,17 @@ public abstract class Elevator {
             } else {
                 addDownRequest(request);
             }
-        } catch (IncorrectKeyCodeException incorrectKeyCodeException) {
-            System.out.println(this.getClass().getName() + " --Waiting to release the elevator. Cannot proceed");
-        } catch (ExceededWeightLimitException weightLimitException) {
-            handleStuckElevator(request.desiredDirection());
+        } catch (IncorrectKeyCodeException | ExceededWeightLimitException businessException) {
+            handleStuckElevator(request.desiredDirection(), businessException.getMessage());
         }
     }
 
-    private void handleStuckElevator(Direction desiredDirection) {
+    private void handleStuckElevator(Direction desiredDirection, String exceptionMessage) {
         isStuck = true;
         onGoingDirection = Direction.NONE;
         while(isStuck) {
-            System.out.println("Waiting to release the elevator. Weight limit has been reached or invalid keycard introduced");
+            System.out.println(exceptionMessage);
+            System.out.println("Waiting to release the elevator.");
             try {
                 Thread.sleep(5000); //Simulate users are going out from elevator to continue. This request is ignored.
                 isStuck = false;
@@ -87,26 +87,25 @@ public abstract class Elevator {
             //Only calculate weight from people who are already inside elevator
             currentWeight = currentWeight  + upRequest.weight();
         }
-        // If the request is sent from outside the elevator,
-        // we need to stop at the current floor of the requester
+        // If the request is sent from outside the elevator we need to stop at the current floor of the requester
         // to pick them up, and then go to the desired floor.
         if (upRequest.currentLocation() == Location.OUTSIDE) {
             // Go pick up the requester who is outside of the elevator
             upPriorityQueue.offer(new Request(upRequest.elevatorType(),
                     upRequest.currentFloor(),
-                    upRequest.currentFloor(),
+                    upRequest.currentFloor(), //Current floor is the desired floor in this case
                     Direction.UP,
                     Location.OUTSIDE,
                     0L, //Since the elevator will pick the users up at this moment. No weight
                     upRequest.keycode()));
 
-            System.out.println(this.getClass().getName() + " --Append up request going to floor " + upRequest.currentFloor() + " to pick users up");
+            System.out.println(this.getClass().getSimpleName() + " --Adding up request to go to floor " + upRequest.currentFloor() + " to pick users up");
         }
 
         // Go to the desired floor
         upPriorityQueue.offer(upRequest);
 
-        System.out.println(this.getClass().getName() + " --Append up request going to floor " + upRequest.desiredFloor());
+        System.out.println(this.getClass().getSimpleName() + " --Adding up request to go to floor " + upRequest.desiredFloor());
     }
 
     private void addDownRequest(Request downRequest) {
@@ -114,22 +113,24 @@ public abstract class Elevator {
             //Only calculate weight from people who are already inside elevator
             currentWeight = currentWeight  + downRequest.weight();
         }
+        // If the request is sent from outside the elevator we need to stop at the current floor of the requester
+        // to pick them up, and then go to the desired floor.
         if (Location.OUTSIDE.equals(downRequest.currentLocation())) {
             downPriorityQueue.offer(new Request(downRequest.elevatorType(),
                     downRequest.currentFloor(),
-                    downRequest.currentFloor(),
+                    downRequest.currentFloor(), //Current floor is the desired floor in this case
                     Direction.DOWN,
                     Location.OUTSIDE,
                     0L, //Since the elevator will pick the users up at this moment. No weight
                     downRequest.keycode()));
 
-            System.out.println(this.getClass().getName() + " --Append down request going to floor " + downRequest.currentFloor() + " to pick users up");
+            System.out.println(this.getClass().getSimpleName() + " --Adding down request to go to floor" + downRequest.currentFloor() + " to pick users up");
         }
 
         // Go to the desired floor
         downPriorityQueue.offer(downRequest);
 
-        System.out.println(this.getClass().getName() + " --Append down request going to floor " + downRequest.desiredFloor());
+        System.out.println(this.getClass().getSimpleName() + " --Adding down request to go to floor " + downRequest.desiredFloor());
     }
     private boolean isValidWeight(Long currentWeight) {
         return currentWeight == null || currentWeight < weightLimit;
@@ -165,18 +166,18 @@ public abstract class Elevator {
         Long currentWeightOnTheElevator = currentWeight  + weightFromNewUsers;
         if(Location.OUTSIDE.equals(request.currentLocation())) {
             if(!isValidWeight(currentWeightOnTheElevator)) {
-                handleStuckElevator(request.desiredDirection());
+                handleStuckElevator(request.desiredDirection(), ExceededWeightLimitException.WEIGHT_LIMIT_REACHED_MESSAGE);
             }
             currentWeight = currentWeightOnTheElevator;
         }
         try {
             Thread.sleep(2000); //Simulate time from moving elevator to the desired floor.
             if(currentFloor.equals(request.desiredFloor())) {
-                System.out.println(this.getClass().getName() + " --Current floor is already the desired floor. This means users want to get out from the elevator and others get in");
+                System.out.println(this.getClass().getSimpleName() + " --Current floor is already the desired floor. This means users want to get out from the elevator and others get in");
             } else {
                 currentFloor = request.desiredFloor();//Simulate elevator movement
                 currentWeight = currentWeight - request.weight();
-                System.out.println(this.getClass().getName() + " --### Processing up requests. Elevator stopped at floor " + currentFloor + ".###");
+                System.out.println(this.getClass().getSimpleName() + " --####### Processing up requests. Elevator stopped at floor " + currentFloor + " #######");
             }
         } catch (InterruptedException ex) {
             //TODO Handle exception.
@@ -192,7 +193,7 @@ public abstract class Elevator {
         //so we need to check weight before continue
         boolean isWeightAllowed = request.currentLocation().equals(Location.OUTSIDE) || (currentWeight + request.weight() < weightLimit);
         if(!isWeightAllowed) {
-            throw new ExceededWeightLimitException("Weight limit has been reached. Cannot move the elevator");
+            throw new ExceededWeightLimitException();
         }
     }
 
@@ -244,14 +245,6 @@ public abstract class Elevator {
             moveDown();
             moveUp();
         }
-    }
-
-    public void start() {
-        while (!upPriorityQueue.isEmpty() || !downPriorityQueue.isEmpty()) {
-            processRequests();
-        }
-        System.out.println(this.getClass().getName() + " -- Finished all requests.");
-        onGoingDirection = Direction.NONE;
     }
 
     public Direction getOnGoingDirection() {

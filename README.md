@@ -1,13 +1,15 @@
 # Elevator challenge
 
-## How to start up the project:
+## Installing the environment:
 * Install JDK 17 (Define JAVA_HOME + Add bin folder to the path)
 * Install Maven 3.6.3+ (Add bin folder to the path)
-* go to root folder and run the following command: **mvn spring-boot:run**
 
 ## How to use it
         
-Define requests to be processed.
+Define requests to be processed with the following format:
+"{ElevatorType};{currentFloor};{desiredFloor};{Direction};{Location};{keycode};"
+
+***Note***: For requests from INSIDE elevator, currentFloor is not needed, therefore, set to 0;
 Example of requests:
 
       String[] requests = new String[]{
@@ -57,9 +59,14 @@ Assumptions:
 - If the elevator is stopped and it has requests from going up and down, it will prioritize UP first.
 
 
-Run the following command to start the requests:
+Run the following command to start processing the requests:
 ```mvn spring-boot:run "-Dspring-boot.run.arguments=PUBLIC;0;5;UP;INSIDE;50;12345 PUBLIC;0;12;UP;INSIDE;17;12345 FREIGHT;0;5;UP;INSIDE;500"```
+Eg with weight limit reached: (Request to floor 8 is ignored after a while)
+```mvn spring-boot:run "-Dspring-boot.run.arguments=PUBLIC;0;5;UP;INSIDE;50;12345 PUBLIC;0;8;UP;INSIDE;995;12345 PUBLIC;0;12;UP;INSIDE;17;12345"```
+Eg with invalid keycard when going to a restricted floor (Request to floor 50 is ignored after a while)
+```mvn spring-boot:run "-Dspring-boot.run.arguments=PUBLIC;0;5;UP;INSIDE;50;12345 PUBLIC;0;50;UP;INSIDE;220;999 PUBLIC;0;12;UP;INSIDE;17;12345"```
 
+mvn spring-boot:run "-Dspring-boot.run.arguments=PUBLIC;0;5;UP;INSIDE;50;12345 PUBLIC;0;12;UP;INSIDE;17;12345 FREIGHT;0;5;UP;INSIDE;500"
 At any moment you could check the status of each elevator using endpoint:
 ```{url}/api/v1/elevators/public``` or ```{url}/api/v1/elevators/freight```
 eg: http://localhost:8080/api/v1/elevators/freight

@@ -28,7 +28,7 @@ public class PublicElevator extends Elevator {
         boolean havePermissionsToTheFloor = !isARestrictedFloor(desiredFloor) ||
                 (isARestrictedFloor(desiredFloor) && isValidKeyCard(request.keycode()));
         if(!havePermissionsToTheFloor) {
-            throw new IncorrectKeyCodeException("Not valid keycard introduced. Cannot process the request");
+            throw new IncorrectKeyCodeException();
         }
     }
 
@@ -37,6 +37,8 @@ public class PublicElevator extends Elevator {
     }
 
     private boolean isValidKeyCard(String keycode) {
+        //!BCrypt.checkpw(keycode, this.keycode))
+        //Since the whole application runs in memory, it is not necesssary to add complexity to the keycode and use a database. keycode is hardcoded for this use case
         return this.keycode.equals(keycode);
     }
 
