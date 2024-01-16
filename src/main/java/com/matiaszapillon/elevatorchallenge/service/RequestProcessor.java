@@ -71,7 +71,7 @@ public class RequestProcessor implements CommandLineRunner {
     }
 
     private void initializeElevators() {
-        this.publicElevator = new PublicElevator(passwordEncoder.encode("12345"));
+        this.publicElevator = new PublicElevator("12345");
         this.freightElevator = new FreightElevator();
     }
 

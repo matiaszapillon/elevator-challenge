@@ -177,7 +177,7 @@ public abstract class Elevator {
             } else {
                 currentFloor = request.desiredFloor();//Simulate elevator movement
                 currentWeight = currentWeight - request.weight();
-                System.out.println(this.getClass().getSimpleName() + " --####### Processing up requests. Elevator stopped at floor " + currentFloor + " #######");
+                System.out.println(this.getClass().getSimpleName() + " --####### Processing " + this.onGoingDirection + " requests. Elevator stopped at floor " + currentFloor + " #######");
             }
         } catch (InterruptedException ex) {
             //TODO Handle exception.

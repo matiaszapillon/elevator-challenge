@@ -23,7 +23,6 @@ Example of requests:
         "PUBLIC;0;2;DOWN;INSIDE;200;12345",
         "PUBLIC;4;-1;DOWN;OUTSIDE;400;12345",
         "FREIGHT;4;32;UP;OUTSIDE;400;12345",
-        "PUBLIC;2;50;DOWN;INSIDE;400;12345",
       };
 
 These requests simulate the following situation:
@@ -47,6 +46,7 @@ These requests simulate the following situation:
 + Change direction to DOWN
 + Stopped at floor 4
 + Stopped at floor 2
++ Stopped at floor 1
 + Stopped at floor -1
 
 **Freight Elevator** should do the following movements:

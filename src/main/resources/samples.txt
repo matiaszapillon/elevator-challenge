@@ -1,0 +1,29 @@
+mvn spring-boot:run "-Dspring-boot.run.arguments=\
+  PUBLIC;0;50;UP;INSIDE;50;12345 \
+  PUBLIC;0;5;UP;INSIDE;5;12345 \
+  PUBLIC;0;3;UP;INSIDE;3;12345 \
+  PUBLIC;3;4;UP;OUTSIDE;350;12345 \
+  PUBLIC;0;2;UP;INSIDE;25;12345 \
+  PUBLIC;0;35;UP;INSIDE;120;12345 \
+  PUBLIC;0;1;DOWN;INSIDE;100;12345 \
+  PUBLIC;0;2;DOWN;INSIDE;200;12345 \
+  PUBLIC;4;-1;DOWN;OUTSIDE;400;12345 \
+  FREIGHT;4;32;UP;OUTSIDE;400;12345"
+
+  expected:
+  Public -> Go flor 2,3,4,5,35,50 and then 4,2,1 y -1
+  Freight -> Go floor 4 and 32.
+  Finished.
+
+mvn spring-boot:run "-Dspring-boot.run.arguments=\
+  PUBLIC;0;50;UP;INSIDE;50;3333 \
+  PUBLIC;0;5;UP;INSIDE;5;12345 \
+  PUBLIC;0;3;UP;INSIDE;3;12345 \
+  PUBLIC;3;4;UP;OUTSIDE;3350;12345 \
+  PUBLIC;0;2;UP;INSIDE;25;12345"
+
+  expected -> No process first request since key invalid
+  go flor 2,3 then floor 4 -> here no process request since the user exceeds the weight. (Weight shouldn't be sum in the total)
+  go floor 5
+  Finished.
+
